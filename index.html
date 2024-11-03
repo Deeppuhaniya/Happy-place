@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attention Required</title>
+    <style>
+        /* Fullscreen blackout effect */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            background-color: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        /* Message box styling */
+        #popup2 {
+            display: none;
+            background-color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            font-family: 'Times New Roman', serif;
+            color: red;
+            font-size: 11px; /* Increased font size by 3 */
+            max-width: 90%;
+        }
+        /* Skull popup styling */
+        #popup1 {
+            display: none;
+            width: 2cm;
+            height: 2cm;
+            background-color: grey;
+            color: yellow; /* Yellowish color */
+            font-family: 'Times New Roman', serif;
+            font-size: 8px; /* Increased font size */
+            position: relative;
+            top: 0.5cm; /* Position 0.5cm below the first message */
+            text-align: center;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        #popup1 img {
+            width: 1cm;
+            height: 1cm;
+            display: block;
+            margin: 0 auto;
+        }
+        /* Green box container styling */
+        #boxContainer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0.5cm;
+            display: flex;
+            align-items: center;
+        }
+        .greenBox {
+            width: 0.3cm;
+            height: 0.3cm;
+            background-color: green;
+            margin-right: 0.3cm;
+        }
+    </style>
+    <script>
+        // Trigger device vibration and blackout effect
+        function startSequence() {
+            if (navigator.vibrate) {
+                navigator.vibrate(3000); // Initial vibration for 3 seconds
+            }
+            
+            setTimeout(showPopup2, 3000); // Show the typing message first after 3 seconds
+        }
+
+        // Display first message with typing effect
+        function showPopup2() {
+            const popup2 = document.getElementById('popup2');
+            popup2.style.display = 'block';
+
+            const message = "KADDUDI, kaddudi, kaddudi\nIf you’re watching this message, your data security has already been compromised.\nNow we are in a better position to negotiate.";
+            let i = 0;
+
+            function typeMessage() {
+                if (i < message.length) {
+                    popup2.innerHTML += message[i] === '\n' ? '<br>' : message[i];
+                    i++;
+                    setTimeout(typeMessage, 100); // 0.10 second delay for each character
+                } else {
+                    setTimeout(showPopup1, 3000); // Wait 3 seconds after the message is complete to show the skull popup
+                }
+            }
+
+            // Start typing effect and boxes animation
+            typeMessage();
+            startGreenBoxes();
+
+            // Trigger additional vibration 1 second after message appears
+            setTimeout(() => {
+                if (navigator.vibrate) {
+                    navigator.vibrate(5000); // Vibrate for 5 seconds
+                }
+            }, 1000);
+        }
+
+        // Display skull popup 0.5 cm below the message
+        function showPopup1() {
+            const popup1 = document.getElementById('popup1');
+            popup1.style.display = 'block';
+            // Remove the timeout for this popup to stay visible indefinitely
+        }
+
+        // Function to create green boxes animation
+        function startGreenBoxes() {
+            const container = document.getElementById('boxContainer');
+            const totalBoxes = Math.floor(window.innerWidth / (0.6 * 37.7953)); // Calculate number of boxes with spacing
+            
+            let currentBox = 0;
+
+            function addBox() {
+                if (currentBox < totalBoxes) {
+                    const box = document.createElement('div');
+                    box.classList.add('greenBox');
+                    container.appendChild(box);
+                    currentBox++;
+                    setTimeout(addBox, 100); // Delay for next box to appear
+                }
+            }
+
+            addBox();
+        }
+    </script>
+</head>
+<body onload="startSequence()">
+    <!-- First message with typing effect -->
+    <div id="popup2"></div>
+    
+    <!-- Skull popup, displayed 0.5 cm below the first message -->
+    <div id="popup1">
+        <img src="https://media.istockphoto.com/id/507402022/vector/skull.jpg?s=612x612&w=0&k=20&c=Yp6fD1-StqxQCNIJym9pRD6brzelcpo67ZBeWwzwuT8=" alt="Skull Image">
+        <p style="color: red; font-size: 8px;">Data encryption completed</p> <!-- Changed color to red and increased font size -->
+    </div>
+
+    <!-- Green box container at the bottom of the screen -->
+    <div id="boxContainer"></div>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attention Required</title>
+    <style>
+        /* Fullscreen blackout effect */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            background-color: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        /* Message box styling */
+        #popup2 {
+            display: none;
+            background-color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            font-family: 'Times New Roman', serif;
+            color: red;
+            font-size: 11px; /* Increased font size by 3 */
+            max-width: 90%;
+        }
+        /* Skull popup styling */
+        #popup1 {
+            display: none;
+            width: 2cm;
+            height: 2cm;
+            background-color: grey;
+            color: yellow; /* Yellowish color */
+            font-family: 'Times New Roman', serif;
+            font-size: 8px; /* Increased font size */
+            position: relative;
+            top: 0.5cm; /* Position 0.5cm below the first message */
+            text-align: center;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        #popup1 img {
+            width: 1cm;
+            height: 1cm;
+            display: block;
+            margin: 0 auto;
+        }
+        /* Green box container styling */
+        #boxContainer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0.5cm;
+            display: flex;
+            align-items: center;
+        }
+        .greenBox {
+            width: 0.3cm;
+            height: 0.3cm;
+            background-color: green;
+            margin-right: 0.3cm;
+        }
+    </style>
+    <script>
+        // Trigger device vibration and blackout effect
+        function startSequence() {
+            if (navigator.vibrate) {
+                navigator.vibrate(3000); // Initial vibration for 3 seconds
+            }
+            
+            setTimeout(showPopup2, 3000); // Show the typing message first after 3 seconds
+        }
+
+        // Display first message with typing effect
+        function showPopup2() {
+            const popup2 = document.getElementById('popup2');
+            popup2.style.display = 'block';
+
+            const message = "KADDUDI, kaddudi, kaddudi\nIf you’re watching this message, your data security has already been compromised.\nNow we are in a better position to negotiate.";
+            let i = 0;
+
+            function typeMessage() {
+                if (i < message.length) {
+                    popup2.innerHTML += message[i] === '\n' ? '<br>' : message[i];
+                    i++;
+                    setTimeout(typeMessage, 100); // 0.10 second delay for each character
+                } else {
+                    setTimeout(showPopup1, 3000); // Wait 3 seconds after the message is complete to show the skull popup
+                }
+            }
+
+            // Start typing effect and boxes animation
+            typeMessage();
+            startGreenBoxes();
+
+            // Trigger additional vibration 1 second after message appears
+            setTimeout(() => {
+                if (navigator.vibrate) {
+                    navigator.vibrate(5000); // Vibrate for 5 seconds
+                }
+            }, 1000);
+        }
+
+        // Display skull popup 0.5 cm below the message
+        function showPopup1() {
+            const popup1 = document.getElementById('popup1');
+            popup1.style.display = 'block';
+            // Remove the timeout for this popup to stay visible indefinitely
+        }
+
+        // Function to create green boxes animation
+        function startGreenBoxes() {
+            const container = document.getElementById('boxContainer');
+            const totalBoxes = Math.floor(window.innerWidth / (0.6 * 37.7953)); // Calculate number of boxes with spacing
+            
+            let currentBox = 0;
+
+            function addBox() {
+                if (currentBox < totalBoxes) {
+                    const box = document.createElement('div');
+                    box.classList.add('greenBox');
+                    container.appendChild(box);
+                    currentBox++;
+                    setTimeout(addBox, 100); // Delay for next box to appear
+                }
+            }
+
+            addBox();
+        }
+    </script>
+</head>
+<body onload="startSequence()">
+    <!-- First message with typing effect -->
+    <div id="popup2"></div>
+    
+    <!-- Skull popup, displayed 0.5 cm below the first message -->
+    <div id="popup1">
+        <img src="https://media.istockphoto.com/id/507402022/vector/skull.jpg?s=612x612&w=0&k=20&c=Yp6fD1-StqxQCNIJym9pRD6brzelcpo67ZBeWwzwuT8=" alt="Skull Image">
+        <p style="color: red; font-size: 8px;">Data encryption completed</p> <!-- Changed color to red and increased font size -->
+    </div>
+
+    <!-- Green box container at the bottom of the screen -->
+    <div id="boxContainer"></div>
+</body>
+</html>
