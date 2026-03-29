@@ -1,1 +1,518 @@
+import pandas as pd
+import folium
+import re
+from folium.plugins import MarkerCluster, FloatImage, Search
 
+# -------------------------------
+# 1. READ EXCEL
+# -------------------------------
+file_path = r"/mnt/c/Users/yadav/Downloads/AlipurDuarFinal123_with_GR.xlsx"
+df = pd.read_excel(file_path)
+
+# Clean column names
+df.columns = [str(col).strip() for col in df.columns]
+
+# -------------------------------
+# 2. MAP INITIALIZATION
+# -------------------------------
+m = folium.Map(location=[26.55, 89.3], zoom_start=11, tiles=None)
+
+# Satellite Layer (default)
+folium.TileLayer(
+    tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+    attr='Google',
+    name='Google Satellite',
+    overlay=False
+).add_to(m)
+
+# Road Layer
+folium.TileLayer(
+    tiles='https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+    attr='Google',
+    name='Google Road',
+    overlay=False
+).add_to(m)
+
+
+# -------------------------------
+# ADD SSB LOGO (TOP RIGHT)
+# -------------------------------
+from branca.element import Element
+import base64
+
+logo_path = "/mnt/c/Users/yadav/Downloads/Sashastra_Seema_Bal.svg (1).png"
+
+with open(logo_path, "rb") as image_file:
+    logo_base64 = base64.b64encode(image_file.read()).decode("utf-8")
+
+logo_html = f"""
+<div style="
+    position: fixed;
+    top: 10px;
+    right: 120px;
+    z-index: 9999;
+">
+    <img src="data:image/png;base64,{logo_base64}" width="70px">
+</div>
+"""
+
+m.get_root().html.add_child(Element(logo_html))
+
+# -------------------------------
+# PANIC BOX (LEFT MIDDLE, COLLAPSIBLE)
+# -------------------------------
+from branca.element import Element
+
+panic_html = """
+<div id="panic-container" style="
+    position: fixed;
+    left: 30px;
+    top: 45%;
+    z-index: 9999;
+    font-family: Arial, sans-serif;
+">
+
+    <div id="panic-toggle" onclick="togglePanicBox()" style="
+        width: 60px;
+        height: 60px;
+        background: red;
+        color: white;
+        border: 2px solid red;
+        border-radius: 4px;
+        text-align: center;
+        line-height: 56px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    ">
+        !
+    </div>
+
+    <div id="panic-box" style="
+        display: none;
+        margin-top: 6px;
+        width: 80px;
+        height: 160px;
+        background: white;
+        border: 3px solid red;
+        border-radius: 6px;
+        color: red;
+        font-weight: bold;
+        font-size: 18px;
+        text-align: center;
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        padding: 12px 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        cursor: pointer;
+    " onclick="alert('PANIC ALERT TRIGGERED')">
+        PANIC
+    </div>
+</div>
+
+<script>
+function togglePanicBox() {
+    var box = document.getElementById("panic-box");
+    if (box.style.display === "none" || box.style.display === "") {
+        box.style.display = "block";
+    } else {
+        box.style.display = "none";
+    }
+}
+</script>
+"""
+
+m.get_root().html.add_child(Element(panic_html))
+
+# -------------------------------
+# SEARCH LAYER
+# -------------------------------
+search_layer = folium.FeatureGroup(name="Search Layer", control=False, show=True).add_to(m)
+
+
+
+# -------------------------------
+# 3. DMS TO DECIMAL CONVERSION
+# -------------------------------
+def dms_to_decimal_single(dms_str):
+    dms_str = str(dms_str).strip()
+    pattern = r'(\d+)[°]\s*(\d+)[\']\s*([\d.]+)["]?\s*([NSEW])'
+    match = re.search(pattern, dms_str)
+
+    if not match:
+        return None
+
+    degrees = float(match.group(1))
+    minutes = float(match.group(2))
+    seconds = float(match.group(3))
+    direction = match.group(4).upper()
+
+    decimal = degrees + minutes / 60 + seconds / 3600
+
+    if direction in ["S", "W"]:
+        decimal = -decimal
+
+    return decimal
+
+
+def parse_gr(gr_value):
+    if pd.isna(gr_value):
+        return None, None
+
+    gr_value = str(gr_value).strip()
+    if not gr_value:
+        return None, None
+
+    parts = gr_value.split(",")
+
+    if len(parts) != 2:
+        return None, None
+
+    lat_str = parts[0].strip()
+    lon_str = parts[1].strip()
+
+    lat = dms_to_decimal_single(lat_str)
+    lon = dms_to_decimal_single(lon_str)
+
+    return lat, lon
+
+# -------------------------------
+# 4. SAFE VALUE HELPERS
+# -------------------------------
+def safe_text(value, default="00000"):
+    if pd.isna(value):
+        return default
+    value = str(value).strip()
+    if value == "" or value.lower() == "nan":
+        return default
+    return value
+
+
+def safe_phone(value):
+    if pd.isna(value):
+        return "00000"
+    value = str(value).strip()
+    if value == "" or value.lower() == "nan":
+        return "00000"
+
+    # remove trailing .0 if number came from Excel
+    try:
+        f = float(value)
+        if f.is_integer():
+            return str(int(f))
+    except:
+        pass
+
+    return value
+
+
+def small_call_button(phone):
+    return f"""
+    <a href="tel:{phone}"
+       style="
+           display:inline-block;
+           background:#28a745;
+           color:white;
+           text-decoration:none;
+           border-radius:4px;
+           padding:2px 6px;
+           font-size:10px;
+           font-weight:bold;
+           margin-left:6px;">
+       Call
+    </a>
+    """
+
+
+def info_row(label, value, phone=None):
+    if phone is not None:
+        return f"""
+        <div style="margin-bottom:4px;">
+            <span style="font-weight:bold;">{label}</span> {value}
+            {small_call_button(phone)}
+        </div>
+        """
+    else:
+        return f"""
+        <div style="margin-bottom:4px;">
+            <span style="font-weight:bold;">{label}</span> {value}
+        </div>
+        """
+
+# -------------------------------
+# 5. READ UNIQUE CAPF DETAILS
+# -------------------------------
+df["CAPF Details"] = df["CAPF Details"].fillna("").astype(str).str.strip()
+unique_capf = [x for x in df["CAPF Details"].unique() if x]
+
+available_colors = [
+    "red", "blue", "green", "purple", "orange", "darkred",
+    "lightred", "beige", "darkblue", "darkgreen", "cadetblue",
+    "darkpurple", "white", "pink", "lightblue", "lightgreen",
+    "gray", "black"
+]
+
+capf_color_map = {}
+for i, capf_name in enumerate(unique_capf):
+    capf_color_map[capf_name] = available_colors[i % len(available_colors)]
+
+# -------------------------------
+# 6. CREATE DYNAMIC LAYERS
+# -------------------------------
+layers = {}
+clusters = {}
+
+for capf_name in unique_capf:
+
+    color = capf_color_map.get(capf_name, "gray")
+
+    layers[capf_name] = folium.FeatureGroup(name=capf_name).add_to(m)
+
+    clusters[capf_name] = MarkerCluster(
+        icon_create_function=f"""
+        function(cluster) {{
+            return L.divIcon({{
+                html: '<div style="background-color:{color};'
+                      + 'color:white;'
+                      + 'border-radius:50%;'
+                      + 'width:40px;height:40px;'
+                      + 'display:flex;align-items:center;'
+                      + 'justify-content:center;'
+                      + 'font-weight:bold;">'
+                      + cluster.getChildCount() +
+                      '</div>',
+                className: 'marker-cluster',
+                iconSize: new L.Point(40, 40)
+            }});
+        }}
+        """
+    ).add_to(layers[capf_name])
+
+
+other_layer = folium.FeatureGroup(name="Other").add_to(m)
+
+other_cluster = MarkerCluster().add_to(other_layer)
+
+# -------------------------------
+# 7. ADD MARKERS WITH FULL POPUP
+# -------------------------------
+for _, row in df.iterrows():
+    gr = row.get("GR", "")
+    capf = safe_text(row.get("CAPF Details", ""), default="Other")
+    ps_name = safe_text(row.get("PSL Name", ""))
+    ac_no = safe_text(row.get("AC NO", ""))
+    slno = safe_text(row.get("SLNO", ""))
+    ps_no = f"{ac_no}/{slno}"
+
+    lat, lon = parse_gr(gr)
+    if lat is None or lon is None:
+        continue
+
+    police_station = safe_text(row.get("Police Station", ""))
+    police_station_no = safe_phone(row.get("Police Station No", ""))
+    no_of_polling_booths = safe_text(row.get("No. of Polling Booths", ""))
+    criterion = safe_text(row.get("Vulnerable/Critical/Normal", ""))
+    po_name = safe_text(row.get("Presiding Off Name", ""))
+    po_no = safe_phone(row.get("Presiding Off No", ""))
+    strength_ngo = safe_text(row.get("Strength (Off/NGOs)", ""))
+    sec_cmdr_name = safe_text(row.get("SEC CMDR", ""))
+    sec_cmdr_no = safe_phone(row.get("SEC COMDR NO", ""))
+    pb_watcher_name = safe_text(row.get("PB Watcher Name", ""))
+    pb_watcher_no = safe_phone(row.get("PB Watcher No", ""))
+    coy_cmdr_name = safe_text(row.get("COY CMDR", ""))
+    coy_cmdr_no = safe_phone(row.get("COY COMDR NO", ""))
+    sector_mag_name = safe_text(row.get("Sector Mag Name", ""))
+    sector_mag_no = safe_phone(row.get("Sector Mag No", ""))
+    sector_capf_name = safe_text(row.get("Sector CAPF Off Name", ""))
+    sector_capf_no = safe_phone(row.get("Sector CAPF Off No", ""))
+    state_control_room_no = safe_phone(row.get("State Control Room No", ""))
+    district_control_room_no = safe_phone(row.get("District Control Room No", ""))
+    ro_control_room_no = safe_phone(row.get("RO Control Room No", ""))
+
+    nav_url = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
+    big_call_no = sec_cmdr_no if sec_cmdr_no != "00000" else "00000"
+
+    popup_html = f"""
+    <div style="
+        font-family: Arial, sans-serif;
+        width: 280px;
+        max-height: 360px;
+        overflow-y: auto;
+        line-height: 1.35;
+        font-size: 12px;
+        padding: 4px;
+    ">
+        <div style="
+            font-weight:bold;
+            font-size:14px;
+            margin-bottom:6px;
+            color:#222;
+        ">
+            {ps_name}
+        </div>
+
+        {info_row("PS No:", ps_no)}
+        {info_row("Police Station:", police_station)}
+        {info_row("Police Station No:", police_station_no, police_station_no)}
+        {info_row("No of PS:", no_of_polling_booths)}
+        {info_row("Criterion:", criterion)}
+        {info_row("PO Name:", po_name)}
+        {info_row("PO No:", po_no, po_no)}
+        {info_row("Strength of NGO:", strength_ngo)}
+        {info_row("Sec Cmdr:", sec_cmdr_name)}
+        {info_row("Sec Cmdr No:", sec_cmdr_no, sec_cmdr_no)}
+        {info_row("PB Watcher:", pb_watcher_name)}
+        {info_row("PB Watcher No:", pb_watcher_no, pb_watcher_no)}
+        {info_row("Coy Cmdr:", coy_cmdr_name)}
+        {info_row("Coy Cmdr No:", coy_cmdr_no, coy_cmdr_no)}
+        {info_row("Sector Magistrate:", sector_mag_name)}
+        {info_row("Sector Magistrate No:", sector_mag_no, sector_mag_no)}
+        {info_row("Sector CAPF:", sector_capf_name)}
+        {info_row("Sector CAPF No:", sector_capf_no, sector_capf_no)}
+        {info_row("State Control Room:", state_control_room_no, state_control_room_no)}
+        {info_row("District Control Room:", district_control_room_no, district_control_room_no)}
+        {info_row("RO Control Room:", ro_control_room_no, ro_control_room_no)}
+        {info_row("CAPF Details:", capf)}
+        {info_row("GR:", safe_text(gr))}
+
+        <div style="
+            margin-top:10px;
+            display:flex;
+            gap:8px;
+            justify-content:space-between;
+        ">
+            <a href="{nav_url}" target="_blank"
+               style="
+                   flex:1;
+                   text-align:center;
+                   background:#1f78ff;
+                   color:white;
+                   text-decoration:none;
+                   padding:8px 10px;
+                   border-radius:6px;
+                   font-weight:bold;
+               ">
+               Navigate
+            </a>
+
+            <a href="tel:{big_call_no}"
+               style="
+                   flex:1;
+                   text-align:center;
+                   background:#28a745;
+                   color:white;
+                   text-decoration:none;
+                   padding:8px 10px;
+                   border-radius:6px;
+                   font-weight:bold;
+               ">
+               Call
+            </a>
+        </div>
+    </div>
+    """
+
+    color = capf_color_map.get(capf, "gray")
+
+    marker = folium.Marker(
+        location=[lat, lon],
+        popup=folium.Popup(popup_html, max_width=320),
+        tooltip=ps_no,
+        icon=folium.Icon(color=color, icon="info-sign")
+    )
+
+    search_marker = folium.Marker(
+        location=[lat, lon],
+        title=ps_no,
+        icon=folium.DivIcon(html="""<div style="display:none;"></div>""")
+    )
+    search_marker.add_to(search_layer)
+
+    if capf in clusters:
+        marker.add_to(clusters[capf])
+    else:
+        marker.add_to(other_cluster)
+
+
+# -------------------------------
+# 8. SEARCH CONTROL
+# -------------------------------
+Search(
+    layer=search_layer,
+    search_label='title',
+    placeholder='Search PS No',
+    collapsed=False,
+    position='topleft'
+).add_to(m)
+
+map_name = m.get_name()
+
+custom_search_js = f"""
+<script>
+document.addEventListener('DOMContentLoaded', function() {{
+    var map = {map_name};
+    var highlightCircle = null;
+
+    map.on('overlayadd', function() {{}});
+
+    setTimeout(function() {{
+        map.eachLayer(function(layer) {{
+            if (layer instanceof L.Marker) {{
+                // nothing here, just safe traversal
+            }}
+        }});
+
+        for (var key in map._controls) {{
+            // skip
+        }}
+    }}, 500);
+
+    map.eachLayer(function(layer) {{
+        if (layer instanceof L.FeatureGroup) {{
+            // safe scan
+        }}
+    }});
+
+    map.whenReady(function() {{
+        var allControls = document.getElementsByClassName('leaflet-control-search');
+        if (allControls.length > 0) {{
+            var input = allControls[0].querySelector('input');
+        }}
+    }});
+
+    map.on('search:locationfound', function(e) {{
+        var latlng = e.latlng || e.layer.getLatLng();
+
+        map.setView(latlng, 15);
+
+        if (highlightCircle) {{
+            map.removeLayer(highlightCircle);
+        }}
+
+        highlightCircle = L.circle(latlng, {{
+            radius: 60,
+            color: 'red',
+            weight: 2,
+            fillColor: '#ff6666',
+            fillOpacity: 0.20
+        }}).addTo(map);
+    }});
+}});
+</script>
+"""
+
+m.get_root().html.add_child(folium.Element(custom_search_js))
+
+
+# -------------------------------
+# 8a. LAYER CONTROL
+# -------------------------------
+folium.LayerControl().add_to(m)
+
+# -------------------------------
+# 9. SAVE MAP
+# -------------------------------
+output_file = "alipurduar_popup_full_map.html"
+m.save(output_file)
+
+print(f"Map created successfully: {output_file}")
